@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SI PASAR - Rekapan Shift & Order</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 flex justify-center items-start antialiased selection:bg-emerald-500 selection:text-white">
+
+  <!-- Main Mobile Container Simulator -->
+  <div class="w-full max-w-md bg-white min-h-screen flex flex-col shadow-2xl relative pb-28 border-x border-slate-200/80">
+
+    <!-- Header Utama -->
+    <header class="px-5 py-4 bg-white/95 backdrop-blur-md sticky top-0 z-20 border-b border-slate-100 flex justify-between items-center shadow-xs">
+      <div class="flex items-center gap-1">
+        <span class="font-extrabold text-2xl tracking-tight text-amber-500">SI</span>
+        <span class="font-extrabold text-2xl tracking-tight text-emerald-700">PASAR</span>
+      </div>
+      
+      <!-- User Active Session Badge -->
+      <div class="flex items-center gap-2">
+        <div class="text-right">
+          <span id="userDisplayName" class="block text-xs font-bold text-slate-800">User</span>
+          <span id="userRoleBadge" class="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">Role</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 px-4 py-4 space-y-4">
+
+      <!-- Informasi Shift Otomatis + Koneksi Printer -->
+      <section class="bg-slate-900 text-white rounded-2xl p-4 shadow-md space-y-3">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-0.5">Shift Aktif Saat Ini</label>
+            <div id="autoShiftBadge" class="text-emerald-400 font-extrabold text-sm flex items-center gap-1.5">
+              <i data-lucide="clock" class="w-4 h-4"></i>
+              <span>Mendeteksi jam...</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Status Order</span>
+            <span id="pendingCountBadge" class="bg-amber-400 text-slate-900 font-extrabold px-2.5 py-0.5 rounded-full text-xs inline-block mt-0.5">
+              0 Order
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <div class="flex items-center gap-2">
+            <div id="printerIndicator" class="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+            <span id="printerStatusText" class="text-[11px] text-slate-300 font-medium">Printer Belum Terhubung</span>
+          </div>
+          <button onclick="connectPrinter()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+            <i data-lucide="bluetooth" class="w-3.5 h-3.5"></i>
+            <span>Konek Printer</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Input Orderan Baru dengan Fitur Auto-Parse Template WhatsApp -->
+      <section id="inputOrderSection" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
+        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="sparkles" class="w-4 h-4 text-emerald-600"></i>
+          <span>Auto-Paste Template WhatsApp</span>
+        </h3>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tempel (Paste) Pesan WA di Sini untuk Isi Otomatis:</label>
+          <textarea id="rawWaText" rows="3" placeholder="Paste template pesan WhatsApp dari pelanggan di sini..." class="w-full border border-slate-300 bg-white p-2.5 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800" oninput="parseWhatsAppMessage()"></textarea>
+        </div>
+
+        <hr class="border-slate-200">
+
+        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+          <span>Form Input Pesanan</span>
+        </h3>
+        
+        <form id="orderForm" onsubmit="addOrder(event)" class="space-y-2.5">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Nama Pemesan / Toko</label>
+            <input type="text" id="custName" placeholder="Contoh: fia" required class="w-full border border-slate-300 bg-white p-2.5 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Detail Daftar Sayur & Quantity</label>
+            <textarea id="itemDetail" rows="4" placeholder="Detail produk dan rincian pesanan..." required class="w-full border border-slate-300 bg-white p-2.5 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800"></textarea>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Catatan Tambahan / Keterangan Stok (Opsional)</label>
+            <input type="text" id="orderNote" placeholder="Contoh: Cabai ready 2kg, sisa 3kg disusulkan jam 18.00" class="w-full border border-slate-300 bg-white p-2.5 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-amber-900 bg-amber-50/30">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Jam Target Pengiriman</label>
+            <input type="time" id="sendTime" required class="w-full border border-slate-300 bg-white p-2.5 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <button type="submit" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-700 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Simpan Pesanan Masuk</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- Info Mode View -->
+      <section id="readOnlyNotice" class="hidden bg-blue-50 border border-blue-200 rounded-2xl p-3 flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0"></i>
+        <p class="text-[11px] text-blue-800 font-medium">Mode Operasional: Perbarui status pesanan, edit catatan stok, atau cetak struk.</p>
+      </section>
+
+      <!-- Daftar Orderan Aktif -->
+      <section class="space-y-2">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="list-checks" class="w-4 h-4 text-emerald-600"></i>
+            <span>Daftar Order Aktif</span>
+          </h3>
+          <span class="text-[10px] text-slate-400 font-medium">Real-time Order</span>
+        </div>
+
+        <div id="orderListContainer" class="space-y-3">
+          <!-- Item order dimasukkan otomatis via JS -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Modal Pop-up Edit Pesanan & Catatan -->
+    <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl w-full max-w-sm p-4 space-y-3 shadow-2xl border border-slate-200">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h4 class="font-bold text-xs text-slate-800 uppercase flex items-center gap-1">
+            <i data-lucide="edit-3" class="w-4 h-4 text-emerald-600"></i> Edit Pesanan / Catatan Stok
+          </h4>
+          <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <input type="hidden" id="editOrderId">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Detail Barang / Pesanan</label>
+          <textarea id="editItems" rows="4" class="w-full border border-slate-300 p-2 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Catatan Internal / Keterangan Stok Kurang</label>
+          <input type="text" id="editNote" placeholder="Tulis catatan (misal: Cabai baru ada 2kg)..." class="w-full border border-amber-300 bg-amber-50/50 p-2 rounded-xl text-xs text-amber-900 font-medium focus:ring-2 focus:ring-amber-500">
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button onclick="closeEditModal()" class="w-1/2 bg-slate-100 text-slate-600 py-2.5 rounded-xl font-bold text-xs">Batal</button>
+          <button onclick="saveEditOrder()" class="w-1/2 bg-emerald-600 text-white py-2.5 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-700">Simpan Perubahan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed Bottom Navigation -->
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 py-2.5 flex justify-around items-center z-30 shadow-lg">
+      <a href="index.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-600 font-medium transition-colors">
+        <i data-lucide="home" class="w-5 h-5"></i>
+        <span class="text-[10px] tracking-tight">Beranda</span>
+      </a>
+      <a href="kalkulator.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-600 font-medium transition-colors">
+        <i data-lucide="calculator" class="w-5 h-5"></i>
+        <span class="text-[10px] tracking-tight">Kalkulator</span>
+      </a>
+      <a href="shift-orders.html" class="flex flex-col items-center gap-1 text-emerald-700 font-bold transition-colors">
+        <i data-lucide="clock" class="w-5 h-5 stroke-[2.5]"></i>
+        <span class="text-[10px] tracking-tight">Shift Order</span>
+      </a>
+      <a href="display.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-600 font-medium transition-colors">
+        <i data-lucide="qr-code" class="w-5 h-5"></i>
+        <span class="text-[10px] tracking-tight">QR Absen</span>
+      </a>
+      <a href="handover.html" class="flex flex-col items-center gap-1 text-amber-600 hover:text-amber-700 font-bold transition-colors">
+        <i data-lucide="log-out" class="w-5 h-5"></i>
+        <span class="text-[10px] tracking-tight">Tutup Shift</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFE3WgH_LLlbArD7osR4OhtKwlNSmjpKvVvQq-_o8lKbI9Y-3_llKHRZzL_q1-i9Bcxg/exec";
+    let currentRole = '';
+    let currentUsername = '';
+    let currentShiftName = '';
+    let bluetoothDevice = null;
+    let bluetoothCharacteristic = null;
+
+    let orders = JSON.parse(localStorage.getItem('sipasar_orders')) || [];
+
+    function getCurrentShift() {
+      const hours = new Date().getHours();
+      if (hours >= 7 && hours < 15) return "Shift 1 (Pagi 07:00 - 15:00)";
+      if (hours >= 15 && hours < 23) return "Shift 2 (Sore 15:00 - 23:00)";
+      return "Shift 3 (Malam 23:00 - 07:00)";
+    }
+
+    function parseWhatsAppMessage() {
+      const rawText = document.getElementById('rawWaText').value;
+      if (!rawText.trim()) return;
+
+      const nameMatch = rawText.match(/Nama Penerima:\s*(.*)/i);
+      if (nameMatch && nameMatch[1]) {
+        let cleanName = nameMatch[1].replace(/[*_]/g, '').trim();
+        document.getElementById('custName').value = cleanName;
+      }
+
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 30);
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('sendTime').value = `${hours}:${minutes}`;
+
+      const productStartIndex = rawText.indexOf('🛒 *Produk Dipesan:*');
+      const paymentStartIndex = rawText.indexOf('💰 *Rincian Pembayaran:*');
+      
+      if (productStartIndex !== -1 && paymentStartIndex !== -1) {
+        let productSection = rawText.substring(productStartIndex, paymentStartIndex)
+          .replace('🛒 *Produk Dipesan:*', '')
+          .trim();
+        
+        let cleanedLines = productSection.split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0)
+          .join('\n');
+
+        document.getElementById('itemDetail').value = cleanedLines;
+      }
+    }
+
+    async function connectPrinter() {
+      try {
+        if (!navigator.bluetooth) {
+          alert("❌ Browser tidak mendukung Web Bluetooth.");
+          return;
+        }
+
+        document.getElementById('printerStatusText').textContent = 'Mencari Printer...';
+        
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+        });
+
+        const server = await bluetoothDevice.gatt.connect();
+        const services = await server.getPrimaryServices();
+        
+        for (const service of services) {
+          const characteristics = await service.getCharacteristics();
+          for (const char of characteristics) {
+            if (char.properties.write || char.properties.writeWithoutResponse) {
+              bluetoothCharacteristic = char;
+              break;
+            }
+          }
+          if (bluetoothCharacteristic) break;
+        }
+
+        if (!bluetoothCharacteristic) throw new Error("Karakteristik printer tidak ditemukan.");
+
+        document.getElementById('printerIndicator').className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+        document.getElementById('printerStatusText').textContent = `Terhubung: ${bluetoothDevice.name || 'Printer Thermal'}`;
+        alert("✅ Printer Bluetooth berhasil terhubung!");
+
+      } catch (error) {
+        document.getElementById('printerIndicator').className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+        document.getElementById('printerStatusText').textContent = 'Gagal Terhubung';
+        alert("❌ Gagal konek printer: " + error.message);
+      }
+    }
+
+    async function printOrderReceipt(orderId) {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      if (!bluetoothCharacteristic) {
+        alert("⚠️ Printer belum terhubung! Klik 'Konek Printer' terlebih dahulu.");
+        return;
+      }
+
+      try {
+        let encoder = new TextEncoder();
+        let commands = [];
+
+        commands.push(new Uint8Array([0x1B, 0x40]));
+        commands.push(new Uint8Array([0x1B, 0x61, 0x01]));
+        commands.push(encoder.encode("SI PASAR - TOKO 24 JAM\n"));
+        commands.push(encoder.encode("==============================\n"));
+        
+        commands.push(new Uint8Array([0x1B, 0x61, 0x00]));
+        commands.push(encoder.encode(`ID Order : #${order.id.toString().slice(-6)}\n`));
+        commands.push(encoder.encode(`Pemesan  : ${order.customer}\n`));
+        commands.push(encoder.encode(`Jam Kirim: ${order.time}\n`));
+        commands.push(encoder.encode("------------------------------\n"));
+        commands.push(encoder.encode("DETAIL PESANAN:\n"));
+        commands.push(encoder.encode(`${order.items}\n`));
+        
+        if (order.note && order.note.trim() !== '') {
+          commands.push(encoder.encode("------------------------------\n"));
+          commands.push(encoder.encode(`CATATAN: ${order.note}\n`));
+        }
+
+        commands.push(encoder.encode("------------------------------\n"));
+        commands.push(encoder.encode(`Diinput  : ${order.createdBy || '-'}\n`));
+        commands.push(encoder.encode(`Disiapkan: ${order.preparedBy || '-'}\n`));
+        commands.push(encoder.encode(`Dikirim  : ${order.deliveredBy || '-'}\n`));
+        commands.push(encoder.encode("==============================\n"));
+        commands.push(new Uint8Array([0x1B, 0x61, 0x01]));
+        commands.push(encoder.encode("Terima Kasih!\n\n\n"));
+        commands.push(new Uint8Array([0x1D, 0x56, 0x41, 0x10]));
+
+        for (let cmd of commands) {
+          await bluetoothCharacteristic.writeValue(cmd);
+        }
+
+        alert("🖨️ Struk pesanan berhasil dicetak!");
+      } catch (error) {
+        alert("❌ Gagal mencetak struk: " + error.message);
+      }
+    }
+
+    function checkSession() {
+      const session = JSON.parse(localStorage.getItem('sipasar_session'));
+      if (!session || !session.username) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      currentUsername = session.username;
+      currentRole = session.role ? session.role.toLowerCase() : 'kasir';
+
+      currentShiftName = getCurrentShift();
+      document.getElementById('autoShiftBadge').innerHTML = `<i data-lucide="clock" class="w-4 h-4"></i> <span>${currentShiftName}</span>`;
+
+      document.getElementById('userDisplayName').textContent = currentUsername;
+      document.getElementById('userRoleBadge').textContent = session.role || 'Kasir';
+
+      const canInput = ['owner', 'admin', 'kasir', 'supervisor', 'purchasing'].includes(currentRole);
+      if (!canInput) {
+        document.getElementById('inputOrderSection').classList.add('hidden');
+        document.getElementById('readOnlyNotice').classList.remove('hidden');
+      }
+    }
+
+    function renderOrders() {
+      const container = document.getElementById('orderListContainer');
+      container.innerHTML = '';
+
+      const activeOrders = orders.filter(o => o.status !== 'completed');
+      const pendingCount = activeOrders.length;
+
+      if (activeOrders.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">Tidak ada antrean pesanan aktif. Semua sudah beres!</div>';
+      } else {
+        activeOrders.forEach(order => {
+          let statusBg = 'bg-amber-50 border-amber-300';
+          let badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
+          let statusText = '🟡 Pesanan Baru (Pending)';
+
+          if (order.status === 'preparing') {
+            statusBg = 'bg-orange-50 border-orange-300';
+            badgeColor = 'bg-orange-100 text-orange-800 border-orange-200';
+            statusText = '🟠 Sedang Disiapkan';
+          } else if (order.status === 'delivering') {
+            statusBg = 'bg-blue-50 border-blue-300';
+            badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
+            statusText = '🔵 Diambil Kurir';
+          }
+
+          let selectOptionsHtml = '';
+          if (currentRole === 'kurir' || currentRole === 'driver' || currentRole === 'supir') {
+            selectOptionsHtml = `
+              <option value="delivering" ${order.status === 'delivering' ? 'selected' : ''}>🔵 Diambil Kurir</option>
+              <option value="completed">🟢 Sudah Diterima (Selesai & Arsip)</option>
+            `;
+          } else if (['logistik', 'packing', 'stokis', 'prepare'].includes(currentRole)) {
+            selectOptionsHtml = `
+              <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>🟡 1. Pesanan Baru (Pending)</option>
+              <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>🟠 2. Proses / Disiapkan</option>
+              <option value="delivering" ${order.status === 'delivering' ? 'selected' : ''}>🔵 3. Diambil Kurir</option>
+            `;
+          } else {
+            selectOptionsHtml = `
+              <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>🟡 1. Pesanan Baru (Pending)</option>
+              <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>🟠 2. Proses / Disiapkan</option>
+              <option value="delivering" ${order.status === 'delivering' ? 'selected' : ''}>🔵 3. Diambil Kurir</option>
+              <option value="completed">🟢 4. Sudah Diterima (Selesai & Arsip)</option>
+            `;
+          }
+
+          const card = document.createElement('div');
+          card.className = `p-3.5 rounded-2xl border transition-all ${statusBg} space-y-2.5`;
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <span class="font-extrabold text-xs text-slate-900 block">${order.customer}</span>
+                <span class="text-[10px] font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
+                  <i data-lucide="clock" class="w-3 h-3"></i> Jam Kirim: ${order.time}
+                </span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="openEditModal(${order.id})" class="text-[10px] font-bold px-2 py-1 bg-white border border-slate-300 hover:border-amber-500 text-slate-700 rounded-lg flex items-center gap-1 shadow-2xs">
+                  <i data-lucide="edit-3" class="w-3 h-3 text-amber-600"></i> Edit
+                </button>
+                <span class="text-[10px] font-bold px-2.5 py-1 rounded-full border ${badgeColor}">${statusText}</span>
+              </div>
+            </div>
+
+            <!-- Detail Pesanan -->
+            <div class="bg-white p-2.5 rounded-xl border border-slate-200/80">
+              <textarea readonly class="w-full text-xs text-slate-800 font-mono bg-transparent border-none focus:outline-none resize-y min-h-[60px] leading-tight">${order.items}</textarea>
+            </div>
+
+            <!-- AREA TEXTBOX CATATAN INTERNAL / KETERANGAN STOK (Diantara Textbox) -->
+            <div class="bg-amber-100/70 border border-amber-300 p-2 rounded-xl text-[11px] text-amber-900 font-medium flex items-start gap-1.5">
+              <i data-lucide="sticky-note" class="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5"></i>
+              <div class="w-full">
+                <span class="font-bold text-[10px] text-amber-950 uppercase tracking-wider block mb-0.5">Catatan Stok / Tambahan:</span>
+                <span class="block leading-tight text-amber-900 font-semibold">${order.note && order.note.trim() !== '' ? order.note : '<em class="text-slate-400 font-normal">Tidak ada catatan. Klik Edit untuk menambah catatan.</em>'}</span>
+              </div>
+            </div>
+
+            <!-- Audit Trail -->
+            <div class="bg-white/80 border border-slate-200/60 p-2 rounded-xl text-[10px] space-y-0.5 text-slate-600 font-medium">
+              <div>✍️ Diinput: <strong class="text-slate-800">${order.createdBy || '-'}</strong></div>
+              <div>📦 Disiapkan: <strong class="text-slate-800">${order.preparedBy || '-'}</strong></div>
+              <div>🚚 Dikirim: <strong class="text-slate-800">${order.deliveredBy || '-'}</strong></div>
+            </div>
+
+            <div class="pt-1 flex items-center gap-2">
+              <select onchange="handleStatusChange(${order.id}, this)" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs">
+                <option value="" disabled selected>-- Ubah Status --</option>
+                ${selectOptionsHtml}
+              </select>
+              <button onclick="printOrderReceipt(${order.id})" title="Cetak Struk" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Cetak</span>
+              </button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      const badge = document.getElementById('pendingCountBadge');
+      badge.textContent = `${pendingCount} Order`;
+      if (pendingCount > 0) {
+        badge.className = "bg-amber-400 text-slate-900 font-extrabold px-2.5 py-0.5 rounded-full text-xs animate-pulse";
+      } else {
+        badge.className = "bg-emerald-500 text-white font-extrabold px-2.5 py-0.5 rounded-full text-xs";
+      }
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      localStorage.setItem('sipasar_orders', JSON.stringify(orders));
+    }
+
+    function addOrder(e) {
+      e.preventDefault();
+      const name = document.getElementById('custName').value.trim();
+      const items = document.getElementById('itemDetail').value.trim();
+      const time = document.getElementById('sendTime').value.trim();
+      const note = document.getElementById('orderNote').value.trim();
+
+      if (!name || !items || !time) return;
+
+      const newOrder = {
+        id: Date.now(),
+        customer: name,
+        items: items,
+        note: note || '',
+        time: time,
+        status: 'pending',
+        createdBy: currentUsername,
+        preparedBy: '-',
+        deliveredBy: '-'
+      };
+
+      orders.unshift(newOrder);
+      renderOrders();
+      document.getElementById('orderForm').reset();
+      document.getElementById('rawWaText').value = '';
+    }
+
+    // Modal Edit Functionality
+    function openEditModal(id) {
+      const order = orders.find(o => o.id === id);
+      if (!order) return;
+
+      document.getElementById('editOrderId').value = order.id;
+      document.getElementById('editItems').value = order.items;
+      document.getElementById('editNote').value = order.note || '';
+
+      document.getElementById('editModal').classList.remove('hidden');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    function saveEditOrder() {
+      const id = parseInt(document.getElementById('editOrderId').value);
+      const newItems = document.getElementById('editItems').value.trim();
+      const newNote = document.getElementById('editNote').value.trim();
+
+      orders = orders.map(o => {
+        if (o.id === id) {
+          return { ...o, items: newItems, note: newNote };
+        }
+        return o;
+      });
+
+      renderOrders();
+      closeEditModal();
+    }
+
+    async function handleStatusChange(id, selectElement) {
+      const newStatus = selectElement.value;
+      const order = orders.find(o => o.id === id);
+      if (!order) return;
+
+      if (newStatus === 'completed') {
+        const confirmDone = confirm(`⚠️ KONFIRMASI PENYELESAIAN:\n\nPesanan atas nama "${order.customer}" akan dinyatakan SELESAI, dihapus dari layar aktif, dan otomatis dicatat ke Spreadsheet.\n\nYakin pesanan ini sudah diterima?`);
+        
+        if (!confirmDone) {
+          renderOrders();
+          return;
+        }
+
+        order.status = 'completed';
+        if (!order.deliveredBy) order.deliveredBy = currentUsername;
+
+        try {
+          fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'save_log',
+              customer: order.customer,
+              items: order.items,
+              note: order.note || '-',
+              time: order.time,
+              createdBy: order.createdBy || '-',
+              preparedBy: order.preparedBy || '-',
+              deliveredBy: order.deliveredBy || currentUsername
+            })
+          }).catch(err => console.log('Log sync error:', err));
+        } catch (e) {
+          console.log(e);
+        }
+
+        alert("✅ Pesanan diselesaikan dan diarsipkan ke Spreadsheet!");
+        renderOrders();
+        return;
+      }
+
+      orders = orders.map(o => {
+        if (o.id === id) {
+          let updated = { ...o, status: newStatus };
+          if (newStatus === 'preparing' && order.preparedBy === '-') updated.preparedBy = currentUsername;
+          if (newStatus === 'delivering' && order.deliveredBy === '-') updated.deliveredBy = currentUsername;
+          return updated;
+        }
+        return o;
+      });
+      renderOrders();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      checkSession();
+      renderOrders();
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SI PASAR - Scan Presensi</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 flex justify-center items-start antialiased selection:bg-emerald-500 selection:text-white">
+
+  <!-- Main Container Simulator -->
+  <div class="w-full max-w-md bg-white min-h-screen flex flex-col shadow-2xl relative pb-24 border-x border-slate-200/80">
+
+    <!-- Header -->
+    <header class="px-5 py-4 bg-white/95 backdrop-blur-md sticky top-0 z-20 border-b border-slate-100 flex justify-between items-center shadow-xs">
+      <div class="flex items-center gap-1">
+        <span class="font-extrabold text-2xl tracking-tight text-amber-500">SI</span>
+        <span class="font-extrabold text-2xl tracking-tight text-emerald-700">PASAR</span>
+      </div>
+      <div class="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-full text-xs font-semibold border border-emerald-100">
+        <i data-lucide="user-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+        <span>Presensi HP</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 px-4 py-6 space-y-4">
+      <h1 class="text-xl font-bold text-slate-800">Absensi Karyawan</h1>
+
+      <!-- Langkah 1: pilih nama & status -->
+      <section id="formView" class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+        <div>
+          <label for="nama" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nama Karyawan</label>
+          <select id="nama" class="w-full border border-slate-300 rounded-xl p-3 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="">Memuat daftar nama…</option>
+          </select>
+        </div>
+        <fieldset>
+          <legend class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Status Kehadiran</legend>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="cursor-pointer">
+              <input type="radio" name="status" value="Masuk" class="peer sr-only" checked>
+              <span class="block text-center border border-slate-300 rounded-xl p-3 text-sm font-bold text-slate-700 bg-white peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600 shadow-xs transition">Masuk</span>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="status" value="Pulang" class="peer sr-only">
+              <span class="block text-center border border-slate-300 rounded-xl p-3 text-sm font-bold text-slate-700 bg-white peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600 shadow-xs transition">Pulang</span>
+            </label>
+          </div>
+        </fieldset>
+        <button id="btnScan" class="w-full bg-emerald-600 text-white rounded-xl p-3.5 font-bold text-sm shadow-md hover:bg-emerald-700 transition disabled:opacity-50" disabled>Buka Kamera &amp; Scan</button>
+      </section>
+
+      <!-- Langkah 2: kamera -->
+      <section id="scanView" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-xs">
+        <p class="text-xs text-slate-600 mb-3 font-medium">Arahkan kamera ke QR Code di layar toko.</p>
+        <div id="reader" class="w-full overflow-hidden rounded-xl border border-slate-300"></div>
+        <button id="btnCancel" class="w-full mt-4 border border-slate-300 bg-white text-slate-700 rounded-xl p-3 font-semibold text-sm hover:bg-slate-100 transition">Batal</button>
+      </section>
+
+      <!-- Langkah 3: hasil -->
+      <section id="resultView" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-xs text-center space-y-4">
+        <div>
+          <p id="resultTitle" class="text-xl font-bold mb-1"></p>
+          <p id="resultMsg" class="text-xs text-slate-600 font-medium"></p>
+        </div>
+        <button id="btnBack" class="w-full bg-emerald-600 text-white rounded-xl p-3.5 font-bold text-sm shadow-md hover:bg-emerald-700 transition">Kembali</button>
+      </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-6 py-2.5 flex justify-around items-center z-30 shadow-lg">
+      <a href="index.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-600 font-medium transition-colors">
+        <i data-lucide="home" class="w-5 h-5"></i>
+        <span class="text-[10px] tracking-tight">Beranda</span>
+      </a>
+      <a href="kalkulator.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-600 font-medium transition-colors">
+        <i data-lucide="calculator" class="w-5 h-5"></i>
+        <span class="text-[10px] tracking-tight">Kalkulator</span>
+      </a>
+      <a href="display.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-600 font-medium transition-colors">
+        <i data-lucide="qr-code" class="w-5 h-5"></i>
+        <span class="text-[10px] tracking-tight">QR Absen</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbxFE3WgH_LLlbArD7osR4OhtKwlNSmjpKvVvQq-_o8lKbI9Y-3_llKHRZzL_q1-i9Bcxg/exec";
+    const STORE_LAT = -7.0516272;
+    const STORE_LNG = 110.3950677;
+    const MAX_RADIUS_METERS = 50;
+
+    const $ = id => document.getElementById(id);
+    const views = ['formView', 'scanView', 'resultView'];
+    const show = name => views.forEach(v => $(v).classList.toggle('hidden', v !== name));
+    let scanner = null;
+    let busy = false;
+
+    function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const rad = Math.PI / 180;
+      const dLat = (lat2 - lat1) * rad;
+      const dLon = (lon2 - lon1) * rad;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    }
+
+    function getCurrentLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('Perangkat Anda tidak mendukung fitur lokasi (GPS).'));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          err => {
+            let msg = 'Gagal mengambil lokasi GPS.';
+            if (err.code === err.PERMISSION_DENIED) msg = 'Akses lokasi (GPS) ditolak. Harap aktifkan izin.';
+            else if (err.code === err.POSITION_UNAVAILABLE) msg = 'Sinyal lokasi/GPS tidak ditemukan.';
+            else if (err.code === err.TIMEOUT) msg = 'Waktu pengambilan lokasi habis.';
+            reject(new Error(msg));
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      });
+    }
+
+    async function loadEmployees() {
+      try {
+        const res = await fetch(API_URL + '?action=employees');
+        const data = await res.json();
+        const listKaryawan = data.employees || data.data || [];
+        if (!data.ok || listKaryawan.length === 0) throw new Error("Daftar nama kosong");
+
+        const saved = localStorage.getItem('presensi_nama') || '';
+        $('nama').innerHTML = '<option value="">Pilih nama Anda</option>' +
+          listKaryawan.map(n => `<option value="${n}">${n}</option>`).join('');
+        if (listKaryawan.includes(saved)) $('nama').value = saved;
+        updateButton();
+      } catch (e) {
+        $('nama').innerHTML = '<option value="">Gagal memuat nama.</option>';
+      }
+    }
+
+    function updateButton() { $('btnScan').disabled = !$('nama').value; }
+    $('nama').addEventListener('change', updateButton);
+
+    async function startScan() {
+      localStorage.setItem('presensi_nama', $('nama').value);
+      showResult(null, 'Mengecek Lokasi GPS…', 'Mohon tunggu sebentar.');
+      try {
+        const userLoc = await getCurrentLocation();
+        const distance = getDistanceInMeters(userLoc.lat, userLoc.lng, STORE_LAT, STORE_LNG);
+        if (distance > MAX_RADIUS_METERS) {
+          showResult(false, 'Di Luar Jangkauan Toko', `Jarak Anda ${Math.round(distance)} meter dari toko. Batas maksimal ${MAX_RADIUS_METERS} meter.`);
+          return;
+        }
+      } catch (err) {
+        showResult(false, 'Akses Lokasi Gagal', err.message);
+        return;
+      }
+
+      show('scanView');
+      busy = false;
+      scanner = new Html5Qrcode('reader');
+      try {
+        await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 240, height: 240 } }, onScanSuccess, () => {});
+      } catch (err) {
+        showResult(false, 'Kamera Tidak Dapat Dibuka', 'Izinkan akses kamera di browser.');
+      }
+    }
+
+    async function stopScan() {
+      if (scanner) {
+        try { await scanner.stop(); scanner.clear(); } catch (e) {}
+        scanner = null;
+      }
+    }
+
+    async function onScanSuccess(token) {
+      if (busy) return;
+      busy = true;
+      await stopScan();
+      $('resultView').classList.add('hidden');
+      showResult(null, 'Mengirim Presensi…', '');
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            nama: $('nama').value,
+            status: document.querySelector('input[name="status"]:checked').value,
+            token: token,
+            waktuScan: new Date().toISOString()
+          })
+        });
+        const data = await res.json();
+        if (data.ok) showResult(true, 'Berhasil', `${data.message} (${data.jam})`);
+        else showResult(false, 'Gagal', data.message);
+      } catch (e) {
+        showResult(false, 'Gagal Terhubung', 'Periksa koneksi internet.');
+      }
+    }
+
+    function showResult(ok, title, msg) {
+      show('resultView');
+      $('resultTitle').textContent = title;
+      $('resultTitle').className = 'text-xl font-bold mb-1 ' +
+        (ok === true ? 'text-emerald-700' : ok === false ? 'text-red-600' : 'text-slate-700');
+      $('resultMsg').textContent = msg;
+      $('btnBack').classList.toggle('hidden', ok === null);
+    }
+
+    $('btnScan').addEventListener('click', startScan);
+    $('btnCancel').addEventListener('click', async () => { await stopScan(); show('formView'); });
+    $('btnBack').addEventListener('click', async () => { await stopScan(); show('formView'); });
+
+    loadEmployees();
+    document.addEventListener("DOMContentLoaded", () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SI PASAR - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 flex justify-center items-center p-4 antialiased selection:bg-emerald-500 selection:text-white">
+
+  <!-- Login Container Simulator -->
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200/80 p-6 space-y-6">
+
+    <!-- Header / Brand -->
+    <div class="text-center space-y-2">
+      <div class="flex items-center justify-center gap-1">
+        <span class="font-extrabold text-3xl tracking-tight text-amber-500">SI</span>
+        <span class="font-extrabold text-3xl tracking-tight text-emerald-700">PASAR</span>
+      </div>
+      <p class="text-xs text-slate-500 font-medium">Sistem Masuk Terpadu Toko</p>
+    </div>
+
+    <!-- Form Login -->
+    <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+      
+      <!-- Username / ID Karyawan -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Username / ID Karyawan</label>
+        <input type="text" id="username" placeholder="Masukkan ID atau Nama User" required class="w-full border border-slate-300 bg-slate-50 p-3 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <!-- Password / PIN Akses 4 Digit -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">PIN Akses (4 Digit)</label>
+        <input type="password" id="password" placeholder="••••" maxlength="4" minlength="4" pattern="[0-9]{4}" required class="w-full border border-slate-300 bg-slate-50 p-3 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono tracking-widest">
+      </div>
+
+      <!-- Keamanan Device Binding Info -->
+      <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-xl flex items-start gap-2.5">
+        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+        <p class="text-[11px] text-emerald-800 leading-relaxed">
+          <strong>Perangkat Terikat:</strong> Akun Anda akan terkunci otomatis pada HP/perangkat ini untuk menjaga keamanan.
+        </p>
+      </div>
+
+      <!-- Tombol Login -->
+      <button type="submit" id="btnLogin" class="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-extrabold text-sm shadow-md hover:bg-emerald-700 transition flex items-center justify-center gap-2">
+        <i data-lucide="log-in" class="w-4 h-4"></i>
+        <span>Masuk ke Sistem</span>
+      </button>
+
+    </form>
+
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFE3WgH_LLlbArD7osR4OhtKwlNSmjpKvVvQq-_o8lKbI9Y-3_llKHRZzL_q1-i9Bcxg/exec";
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const inputUser = document.getElementById('username').value.trim().toLowerCase();
+      const inputPin = document.getElementById('password').value.trim();
+      const btn = document.getElementById('btnLogin');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>Memeriksa Akun...</span>';
+
+      try {
+        // Ambil data dari sheet Karyawan
+        const res = await fetch(SCRIPT_URL + '?action=employees');
+        const data = await res.json();
+
+        if (!data.ok || !data.employees) {
+          throw new Error("Gagal terhubung ke database karyawan.");
+        }
+
+        // Cari karyawan berdasarkan username/nama dan PIN
+        const found = data.employees.find(emp => 
+          (emp.username.toLowerCase() === inputUser || emp.nama.toLowerCase() === inputUser) && 
+          String(emp.pin) === inputPin
+        );
+
+        if (!found) {
+          alert("❌ Login Gagal!\nUsername/ID atau PIN 4 digit salah.");
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="log-in" class="w-4 h-4"></i><span>Masuk ke Sistem</span>';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          return;
+        }
+
+        // Buat Unique Device ID
+        let deviceId = localStorage.getItem('sipasar_device_id');
+        if (!deviceId) {
+          deviceId = 'DEV-' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+          localStorage.setItem('sipasar_device_id', deviceId);
+        }
+
+        // SIMPAN SESI LENGKAP DENGAN LEVEL DARI DATABASE
+        const sessionData = {
+          username: found.nama,       // Nama asli dari database
+          role: found.level,          // Level asli (misal: Logistik, Kasir, Supir)
+          deviceId: deviceId,
+          loginTime: new Date().toISOString()
+        };
+
+        localStorage.setItem('sipasar_session', JSON.stringify(sessionData));
+        
+        alert(`✅ Login Berhasil!\nSelamat datang, ${found.nama} (${found.level}).`);
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="log-in" class="w-4 h-4"></i><span>Masuk ke Sistem</span>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

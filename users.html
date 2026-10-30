@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SI PASAR - Manajemen Pengguna</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 flex justify-center items-start p-4 antialiased selection:bg-emerald-500 selection:text-white">
+
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200/80 p-6 space-y-6 mb-12">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+      <div>
+        <div class="flex items-center gap-1">
+          <span class="font-extrabold text-2xl tracking-tight text-amber-500">SI</span>
+          <span class="font-extrabold text-2xl tracking-tight text-emerald-700">PASAR</span>
+        </div>
+        <p class="text-[11px] text-slate-500 font-medium">Manajemen Hak Akses Karyawan</p>
+      </div>
+      <a href="index.html" class="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-200 transition flex items-center gap-1">
+        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+        <span>Kembali</span>
+      </a>
+    </div>
+
+    <!-- Form Tambah Karyawan -->
+    <form id="addUserForm" onsubmit="saveUser(event)" class="space-y-4">
+      <h2 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+        <i data-lucide="user-plus" class="w-4 h-4 text-emerald-600"></i>
+        <span>Tambah Karyawan Baru</span>
+      </h2>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap</label>
+        <input type="text" id="fullName" placeholder="Nama karyawan" required class="w-full border border-slate-300 bg-slate-50 p-3 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Username / ID Login</label>
+        <input type="text" id="username" placeholder="Contoh: budi123" required class="w-full border border-slate-300 bg-slate-50 p-3 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">PIN Akses (4 Digit Angka)</label>
+        <input type="password" id="pin" placeholder="Contoh: 1234" maxlength="4" minlength="4" pattern="[0-9]{4}" required class="w-full border border-slate-300 bg-slate-50 p-3 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono tracking-widest">
+        <span class="text-[10px] text-slate-400 mt-1 block">Gunakan tepat 4 angka (contoh: 5678)</span>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Level Akses</label>
+        <select id="userRole" required class="w-full border border-slate-300 bg-slate-50 p-3 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="">-- Pilih Level --</option>
+          <option value="Owner">Owner</option>
+          <option value="Supervisor">Supervisor</option>
+          <option value="Admin">Admin</option>
+          <option value="Kasir">Kasir</option>
+          <option value="Purchasing">Purchasing</option>
+          <option value="Logistik">Logistik</option>
+          <option value="Stokis">Stokis</option>
+        </select>
+      </div>
+
+      <button type="submit" id="btnSubmit" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-700 transition flex items-center justify-center gap-1.5">
+        <i data-lucide="save" class="w-4 h-4"></i>
+        <span>Simpan Karyawan</span>
+      </button>
+    </form>
+
+  </div>
+
+  <script>
+    // Masukkan URL Web App Google Apps Script Anda di sini
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFE3WgH_LLlbArD7osR4OhtKwlNSmjpKvVvQq-_o8lKbI9Y-3_llKHRZzL_q1-i9Bcxg/exec";
+
+    async function saveUser(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerText = "MENYIMPAN...";
+
+      const payload = {
+        action: "register",
+        name: document.getElementById('fullName').value.trim(),
+        username: document.getElementById('username').value.trim(),
+        pin: document.getElementById('pin').value.trim(),
+        level: document.getElementById('userRole').value
+      };
+
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+          alert("✅ " + data.message);
+          document.getElementById('addUserForm').reset();
+        } else {
+          alert("❌ Gagal: " + data.message);
+        }
+      } catch (err) {
+        alert("❌ Error jaringan: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i><span>Simpan Karyawan</span>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
